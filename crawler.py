@@ -105,6 +105,19 @@ async def fetch_well_known(session: aiohttp.ClientSession, domain: str) -> Optio
                     if body.startswith('{'):
                         try:
                             data = json.loads(body)
+                            # Validazione: deve avere almeno endpoint o name
+                            # per non essere un falso positivo
+                            if protocol == 'mcp':
+                                if not (data.get('endpoint') or data.get('mcp_version') or
+                                        data.get('protocolVersion') or data.get('serverInfo')):
+                                    continue
+                            elif protocol == 'plugin':
+                                if not (data.get('api') or data.get('name_for_model') or
+                                        data.get('schema_version')):
+                                    continue
+                            elif protocol == 'a2a':
+                                if not (data.get('capabilities') or data.get('agentId')):
+                                    continue
                             return path, protocol, spec, data
                         except json.JSONDecodeError:
                             pass
