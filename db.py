@@ -86,7 +86,7 @@ async def upsert_result(pool, result):
         result.name,
         result.description,
         result.well_known_path,
-        str(result.manifest) if result.manifest else None,
+        __import__("json").dumps(result.manifest) if result.manifest else None,
         result.latency_ms,
         )
 
