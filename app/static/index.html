@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Capabilities Crawler</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #FAF9F5; color: #2c2c2c; }
+  header { border-bottom: 1px solid #e2dfd8; padding: 1rem 2rem;
+           display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 1rem; font-weight: 600; }
+  header a { color: #999; text-decoration: none; font-size: 0.85rem; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+           gap: 1rem; margin-bottom: 2rem; }
+  .stat { background: #fff; border: 1px solid #e2dfd8; border-radius: 6px;
+          padding: 1rem; text-align: center; }
+  .stat-n { font-size: 2rem; font-weight: 700; }
+  .stat-l { font-size: 0.7rem; color: #999; margin-top: 0.2rem; text-transform: uppercase; }
+
+  .crawl-section { background: #fff; border: 1px solid #e2dfd8; border-radius: 6px;
+                   padding: 1rem; margin-bottom: 1.5rem; }
+  .crawl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .crawl-header h2 { font-size: 0.9rem; font-weight: 600; }
+  .crawl-controls { display: flex; gap: 0.5rem; align-items: center; }
+  .crawl-controls label { font-size: 0.8rem; color: #666; }
+  .crawl-controls input { width: 50px; padding: 4px 6px; border: 1px solid #dedad2;
+                          border-radius: 4px; font-size: 0.8rem; text-align: center; }
+  .btn { padding: 5px 14px; border: none; border-radius: 4px; cursor: pointer;
+         font-size: 0.8rem; font-weight: 500; }
+  .btn-start { background: #2c2c2c; color: #fff; }
+  .btn-stop { background: #c0392b; color: #fff; }
+  .btn-stop:hover { background: #a93226; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  .job { margin-bottom: 0.8rem; }
+  .job-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; margin-bottom: 3px; }
+  .job-bar { background: #e2dfd8; border-radius: 4px; height: 6px; }
+  .job-fill { height: 6px; border-radius: 4px; transition: width 1s; }
+  .job-fill.running { background: #2980b9; }
+  .job-fill.done { background: #27ae60; }
+  .job-fill.paused { background: #f39c12; }
+  .job-fill.pending { background: #bbb; }
+  .job-fill.error { background: #c0392b; }
+  .job-actions { display: flex; gap: 0.3rem; }
+  .btn-sm { padding: 2px 8px; font-size: 0.7rem; border: 1px solid #ddd; background: #fff;
+            border-radius: 3px; cursor: pointer; }
+  .btn-sm:hover { background: #f5f3ee; }
+
+  .patterns-section { background: #fff; border: 1px solid #e2dfd8; border-radius: 6px;
+                      padding: 1rem; margin-bottom: 1.5rem; }
+  .patterns-section h2 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .pattern-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .pattern-tag { padding: 3px 8px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; }
+  .pattern-tag.mcp { background: #e8f0f7; color: #2d6a9f; }
+  .pattern-tag.a2a { background: #e8f7ee; color: #1a7a3f; }
+  .pattern-tag.plugin { background: #fdf6e3; color: #7a5c00; }
+
+  .filters { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .filters input, .filters select {
+    padding: 6px 10px; border: 1px solid #dedad2; border-radius: 4px;
+    background: #fff; font-size: 0.85rem; }
+  .filters input { flex: 1; min-width: 200px; }
+  .filters button { padding: 6px 16px; background: #2c2c2c; color: #fff;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; background: #fff;
+          border: 1px solid #e2dfd8; border-radius: 6px; overflow: hidden; }
+  th { background: #f5f3ee; text-align: left; padding: 8px 12px;
+       font-size: 0.75rem; font-weight: 600; color: #666;
+       border-bottom: 1px solid #e2dfd8; }
+  td { padding: 8px 12px; font-size: 0.82rem; border-bottom: 1px solid #f0ede8; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf8f4; }
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 3px;
+           font-size: 0.7rem; font-weight: 600; }
+  .badge-mcp { background: #e8f0f7; color: #2d6a9f; }
+  .badge-a2a { background: #e8f7ee; color: #1a7a3f; }
+  .badge-plugin { background: #fdf6e3; color: #7a5c00; }
+  .total { font-size: 0.8rem; color: #999; margin-bottom: 0.8rem; }
+  a.endpoint { color: #2d6a9f; text-decoration: none; font-size: 0.78rem; }
+  a.endpoint:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>AI Capabilities Crawler</h1>
+    <a href="https://mcpstandard.dev" target="_blank">mcpstandard.dev</a>
+  </div>
+</header>
+<div class="container">
+  <div class="stats" id="stats"></div>
+
+  <div class="patterns-section">
+    <h2>Registered Patterns</h2>
+    <div class="pattern-list" id="patterns"></div>
+  </div>
+
+  <div class="crawl-section">
+    <div class="crawl-header">
+      <h2>Crawl Jobs</h2>
+      <div class="crawl-controls">
+        <label>Concurrency:</label>
+        <input type="number" id="concurrency" value="2" min="1" max="10">
+        <button class="btn btn-start" onclick="startCrawl()">Start All</button>
+        <button class="btn btn-stop" onclick="stopAll()">Stop All</button>
+      </div>
+    </div>
+    <div id="jobs"></div>
+  </div>
+
+  <div class="filters">
+    <input id="q" type="text" placeholder="Search domain, name, description...">
+    <select id="protocol">
+      <option value="">All protocols</option>
+      <option value="mcp">MCP</option>
+      <option value="a2a">A2A</option>
+      <option value="plugin">Plugin</option>
+    </select>
+    <select id="spec">
+      <option value="">All specs</option>
+      <option value="draft-serra">draft-serra</option>
+      <option value="sep-1649">SEP-1649</option>
+      <option value="sep-2127">SEP-2127</option>
+      <option value="google-a2a">Google A2A</option>
+      <option value="openai-plugin">OpenAI Plugin</option>
+      <option value="direct-mcp">Direct MCP</option>
+    </select>
+    <button onclick="searchResults()">Search</button>
+  </div>
+  <div class="total" id="total"></div>
+  <table>
+    <thead><tr>
+      <th>Domain</th><th>Name</th><th>Protocol</th><th>Spec</th>
+      <th>Method</th><th>Endpoint</th><th>Latency</th>
+    </tr></thead>
+    <tbody id="results"></tbody>
+  </table>
+</div>
+<script>
+const BADGE = {mcp:'badge-mcp', a2a:'badge-a2a', plugin:'badge-plugin'};
+
+async function loadStats() {
+  const d = await (await fetch('/v1/stats')).json();
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-n">${(d.total_domains_checked||0).toLocaleString()}</div><div class="stat-l">Checked</div></div>
+    <div class="stat"><div class="stat-n">${d.total_found||0}</div><div class="stat-l">Found</div></div>
+    ${(d.by_protocol||[]).map(p=>`<div class="stat"><div class="stat-n">${p.count}</div><div class="stat-l">${p.protocol}</div></div>`).join('')}
+  `;
+}
+
+async function loadPatterns() {
+  const d = await (await fetch('/v1/patterns')).json();
+  document.getElementById('patterns').innerHTML = d.patterns.map(p =>
+    `<span class="pattern-tag ${p.protocol}">${p.name}</span>`
+  ).join('');
+}
+
+async function loadJobs() {
+  const d = await (await fetch('/v1/crawl/progress')).json();
+  const el = document.getElementById('jobs');
+  if (!d.jobs || !d.jobs.length) { el.innerHTML = '<div style="font-size:0.8rem;color:#999">No jobs. Place .txt files in /data/ and click Start.</div>'; return; }
+  el.innerHTML = d.jobs.map(j => {
+    const pct = j.total > 0 ? (j.checked/j.total*100).toFixed(1) : 0;
+    return `<div class="job">
+      <div class="job-header">
+        <span><strong>${j.list_name}</strong> &mdash; ${(j.checked||0).toLocaleString()}/${(j.total||0).toLocaleString()} &mdash; Found: ${j.found||0}</span>
+        <span class="job-actions">
+          <span class="badge" style="text-transform:uppercase">${j.status}</span>
+          ${j.status==='running'?`<button class="btn-sm" onclick="stopList('${j.list_name}')">Pause</button>`:''}
+        </span>
+      </div>
+      <div class="job-bar"><div class="job-fill ${j.status}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function searchResults() {
+  const q = document.getElementById('q').value;
+  const protocol = document.getElementById('protocol').value;
+  const spec = document.getElementById('spec').value;
+  let url = '/v1/search?limit=50';
+  if (q) url += '&q=' + encodeURIComponent(q);
+  if (protocol) url += '&protocol=' + protocol;
+  if (spec) url += '&spec=' + spec;
+  const d = await (await fetch(url)).json();
+  document.getElementById('total').textContent = d.total + ' results';
+  document.getElementById('results').innerHTML = d.results.map(r => `
+    <tr>
+      <td>${r.domain}</td>
+      <td>${r.name||''}</td>
+      <td><span class="badge ${BADGE[r.protocol]||''}">${r.protocol||''}</span></td>
+      <td><span class="badge">${r.spec||''}</span></td>
+      <td>${r.method||''}</td>
+      <td>${r.endpoint?`<a class="endpoint" href="${r.endpoint}" target="_blank">${r.endpoint.replace('https://','').substring(0,40)}</a>`:''}</td>
+      <td>${r.latency_ms?r.latency_ms+'ms':''}</td>
+    </tr>
+  `).join('');
+}
+
+async function startCrawl() {
+  const c = parseInt(document.getElementById('concurrency').value) || 2;
+  await fetch('/v1/crawl/start', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({concurrency: c})});
+  loadJobs();
+}
+async function stopAll() { await fetch('/v1/crawl/stop', {method:'POST'}); loadJobs(); }
+async function stopList(name) { await fetch('/v1/crawl/stop/' + name, {method:'POST'}); loadJobs(); }
+
+loadStats(); loadPatterns(); searchResults(); loadJobs();
+setInterval(() => { loadStats(); loadJobs(); }, 5000);
+</script>
+</body>
+</html>

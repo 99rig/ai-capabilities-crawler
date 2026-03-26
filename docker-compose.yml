@@ -15,9 +15,13 @@ services:
 
   api:
     build: .
-    command: uvicorn api:app --host 0.0.0.0 --port 8000
     environment:
-      DATABASE_URL: postgresql://crawler:crawler@postgres:5432/ai_capabilities
+      CRAWL_DATABASE_URL: postgresql://crawler:crawler@postgres:5432/ai_capabilities
+      CRAWL_CONCURRENCY: 2
+      CRAWL_WORKERS: 300
+      CRAWL_DATA_DIR: /data
+    volumes:
+      - ./data:/data
     depends_on:
       postgres:
         condition: service_healthy
