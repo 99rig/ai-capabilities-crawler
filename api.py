@@ -5,6 +5,7 @@ GET /v1/stats
 GET /  → dashboard HTML
 """
 from fastapi import FastAPI, Query
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
@@ -79,6 +80,18 @@ DASHBOARD = """<!DOCTYPE html>
 </header>
 <div class="container">
   <div class="stats" id="stats"></div>
+  <div id="progress-bar" style="margin-bottom:1.5rem;display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:#666;margin-bottom:4px">
+      <span id="progress-label">Crawling...</span>
+      <div style="display:flex;align-items:center;gap:0.8rem">
+        <span id="progress-pct"></span>
+        <button id="stop-btn" onclick="stopCrawl()" style="padding:2px 10px;background:#c0392b;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:0.75rem">Stop</button>
+      </div>
+    </div>
+    <div style="background:#e2dfd8;border-radius:4px;height:6px">
+      <div id="progress-fill" style="background:#2c2c2c;height:6px;border-radius:4px;transition:width 0.5s"></div>
+    </div>
+  </div>
   <div class="filters">
     <input id="q" type="text" placeholder="Search domain, name, description...">
     <select id="protocol">
@@ -150,6 +163,46 @@ async function search() {
 }
 loadStats();
 search();
+async function stopCrawl() {
+  if (!confirm('Stop the crawl?')) return;
+  document.getElementById('stop-btn').textContent = 'Stopping...';
+  document.getElementById('stop-btn').disabled = true;
+  await fetch('/v1/crawl/stop');
+}
+async function pollProgress() {
+  try {
+    const r = await fetch('/v1/progress');
+    const d = await r.json();
+    const bar = document.getElementById('progress-bar');
+    if (d.status === 'running') {
+      bar.style.display = 'block';
+      document.getElementById('progress-label').textContent =
+        `Crawling batch ${d.batch}/${d.batches_total} — ${d.checked.toLocaleString()}/${d.total.toLocaleString()} domains`;
+      document.getElementById('progress-pct').textContent = `${d.pct}%`;
+      document.getElementById('progress-fill').style.width = `${d.pct}%`;
+      loadStats();
+      search();
+    } else if (d.status === 'stopped') {
+      bar.style.display = 'block';
+      document.getElementById('progress-label').textContent = `Crawl stopped — ${(d.checked||0).toLocaleString()}/${(d.total||0).toLocaleString()} domains scanned`;
+      document.getElementById('progress-pct').textContent = `${d.pct||0}%`;
+      document.getElementById('progress-fill').style.width = `${d.pct||0}%`;
+      if (document.getElementById('stop-btn')) document.getElementById('stop-btn').style.display='none';
+      loadStats(); search();
+  } else if (d.status === 'done') {
+      bar.style.display = 'block';
+      document.getElementById('progress-label').textContent = `Crawl completed — ${d.total.toLocaleString()} domains scanned`;
+      document.getElementById('progress-pct').textContent = `100%`;
+      document.getElementById('progress-fill').style.width = `100%`;
+      loadStats();
+      search();
+    } else {
+      bar.style.display = 'none';
+    }
+  } catch(e) { console.error('progress error', e); }
+  setTimeout(pollProgress, 3000);
+}
+pollProgress();
 </script>
 </body>
 </html>"""
@@ -157,6 +210,42 @@ search();
 @app.get('/', response_class=HTMLResponse)
 async def dashboard():
     return DASHBOARD
+
+import signal
+import subprocess
+
+@app.get('/v1/crawl/stop')
+async def stop_crawl():
+    """Ferma il crawl in corso."""
+    try:
+        result = subprocess.run(
+            ['pkill', '-f', 'crawl_1m.py'],
+            capture_output=True, text=True
+        )
+        # Aggiorna il file di progress
+        import json, os
+        if os.path.exists('/app/crawl_progress.json'):
+            with open('/app/crawl_progress.json') as f:
+                progress = json.load(f)
+            progress['status'] = 'stopped'
+            with open('/app/crawl_progress.json', 'w') as f:
+                json.dump(progress, f)
+        return {'status': 'stopped'}
+    except Exception as e:
+        return {'status': 'error', 'detail': str(e)}
+
+@app.get('/v1/progress')
+async def progress():
+    """Stato del crawl in corso."""
+    path = '/app/crawl_progress.json'
+    try:
+        if os.path.exists(path):
+            import json
+            with open(path) as f:
+                return json.load(f)
+    except:
+        pass
+    return {'status': 'idle'}
 
 @app.get('/v1/search')
 async def search_api(
