@@ -98,18 +98,6 @@
     <div class="pattern-list" id="patterns"></div>
   </div>
 
-  <div class="crawl-section">
-    <div class="crawl-header">
-      <h2>Crawl Jobs</h2>
-      <div class="crawl-controls">
-        <label>Concurrency:</label>
-        <input type="number" id="concurrency" value="2" min="1" max="10">
-        <button class="btn btn-start" onclick="startCrawl()">Start All</button>
-        <button class="btn btn-stop" onclick="stopAll()">Stop All</button>
-      </div>
-    </div>
-    <div id="jobs"></div>
-  </div>
 
   <div class="filters">
     <input id="q" type="text" placeholder="Search domain, name, description...">
@@ -208,8 +196,8 @@ async function startCrawl() {
 async function stopAll() { await fetch('/v1/crawl/stop', {method:'POST'}); loadJobs(); }
 async function stopList(name) { await fetch('/v1/crawl/stop/' + name, {method:'POST'}); loadJobs(); }
 
-loadStats(); loadPatterns(); searchResults(); loadJobs();
-setInterval(() => { loadStats(); loadJobs(); }, 5000);
+loadStats(); loadPatterns(); searchResults();
+setInterval(() => { loadStats(); }, 5000);
 </script>
 </body>
 </html>
